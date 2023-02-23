@@ -8,10 +8,11 @@ import json
 import copy
 import requests
 from libxduauth.utils.aes import GdutCrypto
-
+import time
 
 class UtilsException(Exception):
     pass
+
 
 # 获得课表
 class GudtUtil(object):
@@ -159,11 +160,13 @@ class GudtUtil(object):
                     'Cookie': cookies,
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                                   'Chrome/89.0.4389.114 Safari/537.36',
-
                 }
-                response = requests.request("POST", ck_url, headers=headers, data=payload, timeout=5)
+                temp_session = requests.session()
+                response = temp_session.post(ck_url, headers=headers, data=payload, timeout=5)
                 if response.status_code == 200:
-                    return response.json()
+                    ret = response.json()
+                    temp_session.close()
+                    return ret
                 else:
                     return None
             except Exception as e:
@@ -194,12 +197,17 @@ class GudtUtil(object):
                 }
                 if is_urlform_urlencoded:
                     headers['Content-Type'] = 'application/x-www-form-urlencoded'
-                response = requests.request("POST", url, headers=headers, data=payload, timeout=5)
+                # 底层还是开个session，默认keep-alive?
+                temp_session = requests.session()
+                response = temp_session.post(url, headers=headers, data=payload, timeout=5)
                 if response.status_code == 200:
-                    return response.json()
+                    ret = response.json()
+                    temp_session.close()
+                    return ret
                 else:
                     return None
             except Exception as e:
+                print(e)
                 try_again_times -= 1
             finally:
                 pass
@@ -306,6 +314,7 @@ class GudtUtil(object):
         :return:
         """
         # 激活url
+        start = time.time()
         self.__login()
         # 个人信息
         # user_info = self.get_user_info()
@@ -313,8 +322,11 @@ class GudtUtil(object):
         # wid = self.__get_semester_message()
         # 课程权限获取
         self.__login(url=self.ck_url)
-        cookies = self.__cookies_2_list()
 
+        # print("花费" + str(time.time() - start))
+        # 关闭连接，防止出现连接异常
+        self.session.close()
+        cookies = self.__cookies_2_list()
         ret = {
             "code": 4000,
             # 为了兼容前端，本科显示的是校区，研究生就显示学院吧
