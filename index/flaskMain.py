@@ -75,6 +75,8 @@ def login():
         return flask.jsonify(ret)
     except Exception as e:
         ret['msg'] = "服务器网络异常，请重试！"
+        print("发现异常：")
+        print(e)
         return flask.jsonify(ret)
 
 
